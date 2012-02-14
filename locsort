@@ -1,0 +1,88 @@
+#!/usr/bin/perl -w
+
+# sort lines by LOC call number
+# the algorithm for this is unfortunately not trivial
+# http://geography.about.com/library/congress/blhowto.htm
+
+my ($file) = shift;
+open(FILE, "$file");
+@file = <FILE>;
+close(FILE);
+open(FILE, ">$file");
+print FILE sort in_loc_order @file;
+
+sub in_loc_order {
+	#check for blank lines; send them to the end of the file
+	if ($a =~ m/^\s*$/) {
+		return -1;
+	}
+	if ($b =~ m/^\s*$/) {
+		return 1;
+	}
+	
+	#strip out everything but the call number portion of the record
+	$a_num = $a;
+	$b_num = $b;
+	chomp($a_num);
+	chomp($b_num);
+	$a_num =~ s/^(.*)\t.*\t.*\t.*$/$1/;
+	$b_num =~ s/^(.*)\t.*\t.*\t.*$/$1/;
+	
+	#parse the call number
+	@a = parse_locnum($a_num);
+	@b = parse_locnum($b_num);
+	
+	#compare each portion of the call number
+	$result = uc($a[0]) cmp uc($b[0]); #uc because PA is the same as Pa
+	if ($result == 0) {
+		if ($a[1] && $b[1]) { $result = $a[1] <=> $b[1]; }
+		if ($result == 0) {
+			if ($a[2] && $b[2]) { $result = $a[2] <=> $b[2]; }
+			if ($result == 0) {
+				#the numerical portions of cutter numbers sort asciibetically, not numerically
+				#so we don't bother to separate the initial letter
+				#and 3, 4, and 8 here use cmp rather than <=>
+				if ($a[3] && $b[3]) { $result = $a[3] cmp $b[3]; }
+				if ($result == 0) {
+					if ($a[4] && $b[4]) { $result = $a[4] cmp $b[4]; }
+					if ($result == 0) {
+						if ($a[5] && $b[5]) { $result = $a[5] cmp $b[5]; }
+						if ($result == 0) {
+							if ($a[6] && $b[6]) { $result = $a[6] <=> $b[6]; }
+							if ($result == 0) {
+								if ($a[7] && $b[7]) { $result = $a[7] cmp $b[7]; }
+								if ($result == 0) {
+									if ($a[8] && $b[8]) { $result = $a[8] cmp $b[8]; }
+									if ($result == 0) {
+										if ($a[9] && $b[9]) { $result = $a[9] <=> $b[9]; }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return $result;
+}
+
+sub parse_locnum {
+	my $locnum = shift;
+	if ($locnum =~ m/^
+		  ([A-Z][A-Za-z]*)\s?(\d+)?		#letter(s) (0) followed by a number (1): QA76 Pa6570 D767 RZA 3764
+		  (?:\.(\d+))?					#a period followed by a number (2): .76
+		  (?:\s?\.\s?([A-Z]\d+))?		#Cutter code - a period, one letter and a number (3): .O63
+		  (?:\s?([A-Z]\d+))?			#2nd Cutter code - one letter and a number (4): G6655
+		  (?:\s([A-Z][a-z]*\d*))?		#abbreviation of title, optional numbers (used in PZ) (5)
+		  (?:\s+(\d+)([a-z])?)?			#year of publication (6), possibly a lowercase letter (7): 1990
+		  (?:\s?\.\s?([A-Z]\d+))?		#3rd Cutter code - a period, one letter and a number (8): .N49
+		  (?:\s(pt|no)\.\s([0-9]+))?	#"pt. " or "no. " followed by a number (9)
+		$/x) {
+		return($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);		#note these are 1-based unlike the above
+	}
+	else {
+		print STDERR "Error parsing $locnum\n"; #DEBUG
+		return("_" . $locnum,0,0,"","","",0,"","",0); #send it to the bottom of the list
+	}
+}

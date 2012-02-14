@@ -1,0 +1,101 @@
+#!/usr/bin/perl -w
+
+# LOC lookup code by Justin Kerk, 2006-2012
+
+# Based on isbn2lccn by Steve Bonds
+# June 12 2004
+# Copyright 2004, all rights reserved.
+
+# This is Free Software.  You may redistribute this script under the terms of
+# either the GNU General Public License version 2.0 or the Perl
+# Artistic License.
+
+use Search::Z3950;
+use Business::ISBN;
+#use MARC::Charset 'marc8_to_utf8';
+
+my ($number) = "@ARGV";
+
+# Trim out dashes
+$number=~ s/\-//g;
+
+unless ($number =~ /\S+/) { die "Please provide ISBN" };
+
+# I could do some data sanity checks on the ISBN, but if it's not valid, the
+# DB query will probably fail later.
+
+$isbnobj = Business::ISBN->new($number);
+
+#if (length($number) == 10) {
+if ($isbnobj && $isbnobj->is_valid_checksum($number) eq Business::ISBN::GOOD_ISBN) {
+	$type = 'isbn';
+}
+else {
+	$type = 'lccn';
+}
+
+$z = Search::Z3950->new(
+			'delay' => 0.5,
+			'preferredRecordSyntax' => 19,
+			'port' => 7090,
+			'host' => 'z3950.loc.gov',
+			'databaseName' => 'Voyager',
+			'search_types' => [
+					   {
+					    'name' => 'isbn',
+					    'multiple' => 0,
+					    'templates' => {
+							    'prefix' => '@attr 1=7 @attr 4=1 "%s"'
+							   }
+					   },
+					   {
+					    'name' => 'lccn',
+					    'multiple' => 0,
+					    'templates' => {
+							    'prefix' => '@attr 1=9 @attr 3=1 "%s"'
+							    # 3=1 sets position to "first in field" ("starts with" search)
+							    # since the same LCCN can be used for two books with a prefix on one
+							   }
+					   },
+					  ],
+			'querytype' => 'prefix',
+		       );
+
+my $results = $z->search($type => $number);
+my $records = $results->count;
+if ($records < 1) {
+  print STDERR uc($type) . " $number not found in Library of Congress\n";
+  exit 1;
+} elsif ($records > 1) {
+  print STDERR "Multiple records found for " . uc($type) . " $number-- shouldn't happen\n";
+  #exit 1;
+}
+my $MARC = $results->record(1);
+if ($MARC->field('050')) {
+	@callnos = $MARC->field('050')->subfield("a");
+	if (scalar(@callnos) > 1 && substr($callnos[0],0,2) eq "PZ") {
+		#sometimes there is more than one call number in the case of PZ - I prefer the non-PZ one
+		$callno = $callnos[1];
+	}
+	else {
+		$callno = $MARC->field('050')->subfield("a");
+		if ($MARC->field('050')->subfield("b")) {
+			$callno .= " " . $MARC->field('050')->subfield("b");
+		}
+	}
+}
+else {
+	print STDERR uc($type) . " $number found in Library of Congress but there is no call number\n";
+	$callno = "-none found-";
+}
+print "$callno\t";
+my $title = $MARC->field('245')->as_string('ab');
+print "$title\t";
+if ($MARC->field('100')) {
+	$author = $MARC->field('100')->subfield("a");
+}
+else {
+	$author = "-none found-";
+}
+print "$author\t";
+print uc($type) . " $number\n";

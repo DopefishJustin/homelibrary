@@ -1,0 +1,79 @@
+#!/usr/bin/perl -w
+
+use Business::ISBN;
+#use Business::Barcode::EAN13;
+use Barcode::Cuecat;
+use MARC::Charset 'marc8_to_utf8';
+use Unicode::Normalize;
+use HTML::Entities;
+
+my ($database) = shift;
+
+open (DATABASE, ">>$database.txt");
+
+binmode(STDOUT, 'utf8');
+binmode(DATABASE, 'utf8');
+
+while (<>) {
+	my ($isbn) = $_;
+	chomp($isbn);
+
+	if (!$isbn) {
+		next;
+	}
+	
+	if ($isbn =~ m/\./) {
+		#assume it's raw :CueCat output
+		my $bc = new Barcode::Cuecat();
+		$bc->scan($isbn);
+		$isbn = $bc->code();
+		print STDERR "Raw :CueCat output detected, converted to barcode $isbn\n";
+	}
+
+	# Trim out dashes
+	#$isbn=~ s/\-//g;
+
+	#unless ($isbn =~ /\S+/) {
+	#	next
+	#};
+	
+	#if (substr($isbn,0,3) eq "978") {
+	#	# this looks like a Bookland EAN and not a real ISBN so we need to convert it
+	#	if (length($isbn) > 13) {
+	#		#strip out price code
+	#		$isbn = substr($isbn,0,13);
+	#	}
+	#	if (length($isbn) == 12) {
+	#		# add missing check digit
+	#		$isbn = $isbn . Business::Barcode::EAN13::check_digit($isbn);
+	#	}
+	#	$isbn = Business::ISBN::ean_to_isbn($isbn);
+	#	print STDERR "Bookland EAN detected, converted to ISBN $isbn\n"; #DEBUG
+	#}
+	
+	$isbnobj = Business::ISBN->new($isbn);
+
+	if ( $isbnobj && $isbnobj->is_valid_checksum($isbn) eq Business::ISBN::GOOD_ISBN ) {
+		$isbnobj = $isbnobj->as_isbn13;	#convert to ISBN-13 in case it's ISBN-10
+		#$isbn = uc($isbn);
+		$isbn = $isbnobj->as_string([]);	#convert back to a normalized string with no hyphens
+	}
+	else {
+		print STDERR "Invalid ISBN $isbn\n";
+		#next;
+	}
+	
+	if (`grep "$isbn" $database.txt`) {
+		print STDERR "$isbn already in database, skipping\n";
+		next;
+	}
+
+	$data = `./loclookup $isbn`;
+	$data = NFC(decode_entities(marc8_to_utf8($data)));
+	print "$data";
+	print DATABASE "$data";
+}
+
+# sort by call number
+#`sort -u $database.txt -o $database.txt`;
+`./locsort $database.txt`;
