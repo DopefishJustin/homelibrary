@@ -1,0 +1,21 @@
+These are my quick-and-dirty Perl scripts for organizing my book collection based on Library of Congress call number.
+
+Usage:
+
+./homelibrary [filename]
+
+Enter ISBN numbers, LCCN numbers, or raw CueCat output, one line per number. Press Ctrl+D (EOF) and then Enter to finish entry.
+
+Books which are found in the LoC database will be written, one line per book, to the file [filename].txt and sorted in order of the LoC call sign. The fields are tab-separated and suitable for import into a spreadsheet if desired. Characters are encoded in UTF-8.
+
+The command can be re-run for the same file and the new books will be added and the file re-sorted on successful exit.
+
+Partly based on isbn2lccn by Steve W Bonds, and accordingly I am distributing it under the GNU General Public License version 2.0.
+
+There are a whole shitload of prerequisites (the blessing and curse of Perl) so it's kind of a pain to get running.
+
+isbn2lccn lists the following: yaz, libyaz, libyaz-devel (from
+http://www.indexdata.dk/yaz/) Search-Z3950-0.05, Net-Z3950-0.44,
+Event-1.00, YAML-0.35, MARC-Record-1.38
+
+In addition to that I use Business::ISBN, Barcode::Cuecat, and probably some other stuff I forgot.
