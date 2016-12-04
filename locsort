@@ -72,7 +72,7 @@ sub parse_locnum {
 	if ($locnum =~ m/^
 		  ([A-Z][A-Za-z]*)\s?(\d+)?		#letter(s) (0) followed by a number (1): QA76 Pa6570 D767 RZA 3764
 		  (?:\.(\d+))?					#a period followed by a number (2): .76
-		  (?:\s?\.\s?([A-Z]\d+))?		#Cutter code - a period, one letter and a number (3): .O63
+		  (?:\s?\.\s?([A-Z]\d+x?))?		#Cutter code - a period, one letter and a number (may also end with x) (3): .O63
 		  (?:\s?([A-Z]\d+))?			#2nd Cutter code - one letter and a number (4): G6655
 		  (?:\s([A-Z][a-z]*\d*))?		#abbreviation of title, optional numbers (used in PZ) (5)
 		  (?:\s+(\d+)([a-z])?)?			#year of publication (6), possibly a lowercase letter (7): 1990
