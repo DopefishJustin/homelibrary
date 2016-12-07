@@ -77,7 +77,7 @@ sub parse_locnum {
 		  (?:\s([A-Z][a-z]*\d*))?		#abbreviation of title, optional numbers (used in PZ) (5)
 		  (?:\s+(\d+)([a-z])?)?			#year of publication (6), possibly a lowercase letter (7): 1990
 		  (?:\s?\.\s?([A-Z]\d+))?		#3rd Cutter code - a period, one letter and a number (8): .N49
-		  (?:\s(pt|no)\.\s([0-9]+))?	#"pt. " or "no. " followed by a number (9)
+		  (?:\s(pt|no|vol)\.\s([0-9]+))?	#"pt. ", "no. ", or "vol. " followed by a number (9)
 		$/x) {
 		return($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);		#note these are 1-based unlike the above
 	}
