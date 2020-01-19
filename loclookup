@@ -63,6 +63,15 @@ $z = Search::Z3950->new(
 
 my $results = $z->search($type => $number);
 my $records = $results->count;
+if ($records < 1 && $type eq 'isbn') {
+  print STDERR uc($type) . " $number not found in Library of Congress\n";
+  # some 10-digit LCCNs coincidentally pass the ISBN checksum test so try again as an LCCN
+  $type = 'lccn';
+  $isbnobj = $isbnobj->as_isbn10;
+  $number = $isbnobj->as_string([]);
+  my $results = $z->search($type => $number);
+  my $records = $results->count;
+}
 if ($records < 1) {
   print STDERR uc($type) . " $number not found in Library of Congress\n";
   exit 1;
